@@ -30,6 +30,13 @@ def shear_y(k):
         [0, 0, 1]
     ])
 
+def shear_x(k):
+    return np.array([
+        [1, k, 0],
+        [0, 1, 0],
+        [0, 0, 1]
+    ])
+
 def draw(polygons):
 
     plt.figure()
@@ -45,10 +52,10 @@ def draw(polygons):
     plt.show()
 
 def main():
-    K = (1, 3)
-    L = (3, 3)
-    M = (3, 1)
-    N = (1, 1)
+    K = (1, 1)
+    L = (1, 3)
+    M = (3, 3)
+    N = (3, 1)
 
     square = np.array([
         [K[0], L[0], M[0], N[0]],
@@ -56,7 +63,7 @@ def main():
         [1, 1, 1, 1]
     ])
 
-    r = (-3 * (K[0] - M[0]), -3 * (K[1] - M[1]))
+    r = (3 * (M[0] - K[0]), 3 * (M[1] - K[1]))
     A = (K[0] + r[0], K[1] + r[1])
 
     T = translate(*r)
@@ -65,14 +72,11 @@ def main():
     H = homothety_point(2, *A)
     sq2 = H @ sq1
 
-    sh = -tan(pi / 3)
-    Sh = shear_y(sh)
+    sh = tan(pi / 3)
+    Sh = translate(A[0], A[1]) @ shear_x(sh) @ translate(-A[0], -A[1])
     sq3 = Sh @ sq2
 
-    T2 = translate(0, -sh * A[0])
-    sq4 = T2 @ sq3
-
-    F = T2 @ Sh @ H @ T
+    F = Sh @ H @ T
 
     abcd = F @ square
 
@@ -84,8 +88,7 @@ def main():
         ("Square KLMN", square),
         ("After T", sq1),
         ("After H", sq2),
-        ("After Shear", sq3),
-        ("Parallelogram ABCD", sq4),
+        ("Parallelogram ABCD", sq3),
     ])
 
     draw([
