@@ -126,7 +126,7 @@ def draw_curve(
     axes.plot(evolute_x, evolute_y, "--", label="Эволюта", alpha=0.7)
     axes.plot(point_x, point_y, "ro", label="M0")
 
-    # КАСАТЕЛЬНАЯ
+    # Касательная
     axes.annotate(
         "",
         xy=(point_x + tangent_x * vector_scale, point_y + tangent_y * vector_scale),
@@ -141,7 +141,7 @@ def draw_curve(
         color="black"
     )
 
-    # НОРМАЛЬ
+    # Нормаль
     axes.annotate(
         "",
         xy=(point_x + normal_x * vector_scale, point_y + normal_y * vector_scale),

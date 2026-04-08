@@ -170,10 +170,19 @@ def main():
         label="a) A-B-C-D: простая, выпуклая вправо"
     )
 
-    plot_control_polygon(axis_task_1, bezier_points_b, "Опорный многоугольник A-C-B-D", "lightgray")
+    shift_value = 1.5
+
+    bezier_points_b_shifted = [
+        point + np.array([shift_value, 0.0])
+        for point in bezier_points_b
+    ]
+
+    bezier_curve_b_shifted = cubic_bezier(bezier_points_b_shifted, parameter_values)
+
+    plot_control_polygon(axis_task_1, bezier_points_b_shifted, "Опорный многоугольник A-C-B-D", "gray")
     axis_task_1.plot(
-        bezier_curve_b[:, 0],
-        bezier_curve_b[:, 1],
+        bezier_curve_b_shifted[:, 0],
+        bezier_curve_b_shifted[:, 1],
         linewidth=2.5,
         label="b) A-C-B-D: с точкой возврата"
     )
