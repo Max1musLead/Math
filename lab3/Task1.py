@@ -20,7 +20,10 @@ segments = [
 
     ((0, 9), (3, 10)),     # s11
     ((5, 7), (8, 5)),      # s12
-    ((9, 1), (13, 2))      # s13
+    ((9, 1), (13, 2)), # s13
+    ((8, 8), (8, 10)),
+    ((7, 9), (11, 9)),
+    ((10, 8), (10, 10))
 ]
 
 epsilon = 1e-9
@@ -89,9 +92,17 @@ def intersection_point(segment1, segment2):
 
 def y_on_segment(segment, x):
     (x1, y1), (x2, y2) = segment
+
+    if abs(x2 - x1) < epsilon:
+        return min(y1, y2)
+
     return y1 + (y2 - y1) * (x - x1) / (x2 - x1)
 
-# I.a По уравнениям прямых среди неколлинеарных
+def is_vertical(segment):
+    (x1, y1), (x2, y2) = segment
+    return abs(x2 - x1) < epsilon
+
+# По уравнениям прямых
 def find_by_lines(segments_list):
     result = []
 
@@ -114,7 +125,7 @@ def find_by_lines(segments_list):
     return result
 
 
-# I.b и II.b Метод косых произведений
+# Метод косых произведений
 def intersect_by_cross_products(segment1, segment2, include_collinear):
     point1, point2 = segment1
     point3, point4 = segment2
@@ -162,7 +173,7 @@ def find_by_cross_products(segments_list, include_collinear):
     return result
 
 
-# I.c и II.c Заметающая прямая
+# Заметающая прямая
 def normalize_segment(segment):
     point1, point2 = segment
 
@@ -242,9 +253,14 @@ def find_by_sweep_line(segments_list, include_collinear):
 
     def active_key(segment_index, current_x):
         segment = segments_list[segment_index]
-        y_value = y_on_segment(segment, current_x)
-
         left_point, right_point = normalize_segment(segment)
+
+        if is_vertical(segment):
+            y_value = min(left_point[1], right_point[1])
+            slope = float("inf")
+            return (y_value, slope, segment_index)
+
+        y_value = y_on_segment(segment, current_x)
         slope = (right_point[1] - left_point[1]) / (right_point[0] - left_point[0])
 
         return (y_value, slope, segment_index)

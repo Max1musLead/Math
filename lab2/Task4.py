@@ -183,12 +183,12 @@ def draw_raster_line(axis, raster_points, title_text, segment_start, segment_end
 def main():
     x_start = 2
     y_start = 3
-    x_end = 14
+    x_end = 7
     y_end = 9
 
     shift_x = 4
     shift_y = 2
-    rotation_angle_degrees = 35
+    rotation_angle_degrees = 10
 
     transformed_x_start, transformed_y_start, transformed_x_end, transformed_y_end = transform_segment(
         x_start,

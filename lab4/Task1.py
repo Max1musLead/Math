@@ -1,9 +1,7 @@
 ﻿import math
 import matplotlib.pyplot as plt
 
-
 epsilon_value = 1e-9
-
 
 def cross_product(point_a, point_b, point_c):
     return (

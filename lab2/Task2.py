@@ -172,17 +172,16 @@ def draw_curve(
     axes.legend()
 
 def main():
-    # Параметры точек M0
-    parabola_t0 = 1.0
-    cycloid_t0 = pi / 2
+    parabola_t0 = 0.0
+    cycloid_t0 = pi * 2
     cycloid_radius = 1.0
 
-    # Парабола вычисляем точку M0 и производные
+    # Парабола M0 и производные
     parabola_x0, parabola_y0 = parabola(parabola_t0)
     parabola_first_x0, parabola_first_y0 = parabola_first(parabola_t0)
     parabola_second_x0, parabola_second_y0 = parabola_second(parabola_t0)
 
-    # Парабола вычисляем геометрические характеристики в точке
+    # Парабола
     parabola_tangent_x, parabola_tangent_y = unit_tangent(parabola_first_x0, parabola_first_y0)
     parabola_normal_x, parabola_normal_y = unit_normal(parabola_first_x0, parabola_first_y0)
     parabola_curvature = curvature(parabola_first_x0, parabola_first_y0, parabola_second_x0, parabola_second_y0)
@@ -193,12 +192,12 @@ def main():
         parabola_second_x0, parabola_second_y0
     )
 
-    # Циклоида вычисляем точку M0 и производные
+    # Циклоида M0 и производные
     cycloid_x0, cycloid_y0 = cycloid(cycloid_t0, cycloid_radius)
     cycloid_first_x0, cycloid_first_y0 = cycloid_first(cycloid_t0, cycloid_radius)
     cycloid_second_x0, cycloid_second_y0 = cycloid_second(cycloid_t0, cycloid_radius)
 
-    # Циклоида вычисляем геометрические характеристики в точке
+    # Циклоида
     cycloid_tangent_x, cycloid_tangent_y = unit_tangent(cycloid_first_x0, cycloid_first_y0)
     cycloid_normal_x, cycloid_normal_y = unit_normal(cycloid_first_x0, cycloid_first_y0)
     cycloid_curvature = curvature(cycloid_first_x0, cycloid_first_y0, cycloid_second_x0, cycloid_second_y0)
@@ -253,7 +252,7 @@ def main():
         cycloid_t_values
     )
 
-    # График сами кривые и точки M0
+    # Графики
     figure_preview, (axes_left, axes_right) = plt.subplots(1, 2, figsize=(12, 5))
 
     axes_left.plot(parabola_x, parabola_y)

@@ -1,7 +1,7 @@
 ﻿import math
 import matplotlib.pyplot as plt
 
-polygon_vertices = [
+polygon_vertices2 = [
     (0, 0),
     (8, 0),
     (8, 2),
@@ -15,7 +15,28 @@ polygon_vertices = [
     (3, 4)
 ]
 
+polygon_vertices = [
+    (0, 0),
+    (10, 0),
+    (10, 2),
+    (7, 2),
+    (7, 3),
+    (9, 3),
+    (9, 5),
+    (6, 5),
+    (6, 7),
+    (10, 7),
+    (4, 10),
+    (2, 10),
+    (-1, 9),
+    (0, 5),
+    (0, 4),
+    (3, 4),
+    (0, 2)
+]
+
 points_to_check = [
+    (-2, 4),
     (1, 1),
     (4, 1),
     (6, 1),

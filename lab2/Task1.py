@@ -161,6 +161,148 @@ def main():
         print("Есть расхождение.")
         print("Максимальное отклонение =", maximum_difference)
 
+def main2():
+    light_angle = pi / 2.5
+    offset_x = -3.0
+    offset_y = 4.0
+    parabola_center_y = 2.0
+
+    vertex_x = offset_x
+    vertex_y = offset_y + parabola_center_y
+
+    parabola_parameter = 0.8
+
+    print("Параметры параболы:")
+    print("Вершина параболы:", (vertex_x, vertex_y))
+    print("p =", parabola_parameter)
+    print("Угол =", light_angle)
+
+    parabola_matrix = np.array([
+        [0.0, 0.0, -parabola_parameter],
+        [0.0, 1.0, -vertex_y],
+        [-parabola_parameter, -vertex_y, vertex_y * vertex_y + 2.0 * parabola_parameter * vertex_x]
+    ])
+
+    print("\nМатрица параболы в однородных координатах:")
+    print(parabola_matrix)
+
+    transformation_matrix = np.array([
+        [1.0, 0.0, -vertex_x],
+        [0.0, np.cos(light_angle), -np.cos(light_angle) * vertex_y],
+        [0.0, 0.0, 1.0]
+    ])
+
+    print("\nМатрица аффинного преобразования F:")
+    print(transformation_matrix)
+
+    inverse_transformation_matrix = np.linalg.inv(transformation_matrix)
+    transformed_parabola_matrix = inverse_transformation_matrix.T @ parabola_matrix @ inverse_transformation_matrix
+
+    print("\nМатрица образа параболы:")
+    print(transformed_parabola_matrix)
+
+    q11 = float(transformed_parabola_matrix[0, 0])
+    q12 = float(transformed_parabola_matrix[0, 1])
+    q13 = float(transformed_parabola_matrix[0, 2])
+    q22 = float(transformed_parabola_matrix[1, 1])
+    q23 = float(transformed_parabola_matrix[1, 2])
+    q33 = float(transformed_parabola_matrix[2, 2])
+
+    print("\nДекартово уравнение образа:")
+    print(
+        f"{q11:.4g}*x² + {2 * q12:.4g}*xy + {q22:.4g}*y² + "
+        f"{2 * q13:.4g}*x + {2 * q23:.4g}*y + {q33:.4g} = 0"
+    )
+
+    point_count = 400
+    parameter_values = np.linspace(-3.0, 3.0, point_count)
+
+    source_x = vertex_x + (parameter_values ** 2) / (2.0 * parabola_parameter)
+    source_y = vertex_y + parameter_values
+
+    source_points = np.array([
+        source_x,
+        source_y,
+        np.ones(point_count)
+    ])
+
+    affine_transformation = F(transformation_matrix)
+    transformed_points = affine_transformation.apply(source_points)
+
+    transformed_x = transformed_points[0, :] / transformed_points[2, :]
+    transformed_y = transformed_points[1, :] / transformed_points[2, :]
+
+    figure, axes = plt.subplots(figsize=(8, 6))
+
+    left_parameter = 3
+    right_parameter = 0
+
+    left_parabola_x = vertex_x + (left_parameter ** 2) / (2.0 * parabola_parameter)
+    left_parabola_y = vertex_y + left_parameter
+
+    right_parabola_x = vertex_x + (right_parameter ** 2) / (2.0 * parabola_parameter)
+    right_parabola_y = vertex_y + right_parameter
+
+    left_point = np.array([[left_parabola_x], [left_parabola_y], [1.0]])
+    right_point = np.array([[right_parabola_x], [right_parabola_y], [1.0]])
+
+    left_transformed = affine_transformation.apply(left_point)
+    right_transformed = affine_transformation.apply(right_point)
+
+    left_transformed_x = left_transformed[0, 0] / left_transformed[2, 0]
+    left_transformed_y = left_transformed[1, 0] / left_transformed[2, 0]
+
+    right_transformed_x = right_transformed[0, 0] / right_transformed[2, 0]
+    right_transformed_y = right_transformed[1, 0] / right_transformed[2, 0]
+
+    axes.plot(
+        [left_parabola_x, left_transformed_x],
+        [left_parabola_y, left_transformed_y],
+        "k--",
+        linewidth=1
+    )
+
+    axes.plot(
+        [right_parabola_x, right_transformed_x],
+        [right_parabola_y, right_transformed_y],
+        "k--",
+        linewidth=1,
+        label="Границы луча света"
+    )
+
+    axes.plot(
+        source_x,
+        source_y,
+        "g-",
+        linewidth=2,
+        label="Парабола"
+    )
+
+    axes.plot(
+        transformed_x,
+        transformed_y,
+        "b-",
+        linewidth=2,
+        label="Образ параболы"
+    )
+
+    axes.scatter(
+        [vertex_x],
+        [vertex_y],
+        color="red",
+        s=50,
+        label="Вершина параболы"
+    )
+
+    axes.set_aspect("equal", adjustable="box")
+    axes.axhline(0, color="k", linewidth=0.5)
+    axes.axvline(0, color="k", linewidth=0.5)
+    axes.grid(True)
+    axes.legend()
+    axes.set_title("Преобразование параболы аффинным преобразованием")
+
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
-    main()
+    main2()

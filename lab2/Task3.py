@@ -50,40 +50,6 @@ def quadratic_bezier(control_points, parameter_values):
 
     return np.array(curve_points)
 
-
-def catmull_rom_spline(control_points, samples_per_segment=50, closed=False):
-    points = np.array(control_points, dtype=float)
-
-    if closed:
-        extended_points = np.vstack([points[-1], points, points[0], points[1]])
-        segment_count = len(points)
-    else:
-        extended_points = np.vstack([points[0], points, points[-1]])
-        segment_count = len(points) - 1
-
-    spline_points = []
-
-    for segment_index in range(segment_count):
-        point_0 = extended_points[segment_index]
-        point_1 = extended_points[segment_index + 1]
-        point_2 = extended_points[segment_index + 2]
-        point_3 = extended_points[segment_index + 3]
-
-        parameter_values = np.linspace(0, 1, samples_per_segment, endpoint=False)
-
-        for parameter_t in parameter_values:
-            spline_point = 0.5 * (
-                (2 * point_1)
-                + (-point_0 + point_2) * parameter_t
-                + (2 * point_0 - 5 * point_1 + 4 * point_2 - point_3) * parameter_t ** 2
-                + (-point_0 + 3 * point_1 - 3 * point_2 + point_3) * parameter_t ** 3
-            )
-            spline_points.append(spline_point)
-
-    spline_points.append(points[0] if closed else points[-1])
-    return np.array(spline_points)
-
-
 def plot_control_polygon(axis, control_points, label_text, color):
     control_points_array = np.array(control_points, dtype=float)
     axis.plot(
@@ -100,9 +66,9 @@ def plot_control_polygon(axis, control_points, label_text, color):
 def main():
     square_points = {
         "A": np.array([0.0, 0.0]),
-        "B": np.array([1.0, 0.0]),
-        "C": np.array([1.0, 1.0]),
-        "D": np.array([0.0, 1.0]),
+        "B": np.array([2.0, 3.0]),
+        "C": np.array([-2.0, 3.0]),
+        "D": np.array([1.0, 0.0]),
     }
 
     parameter_values = np.linspace(0.0, 1.0, 500)
@@ -122,9 +88,8 @@ def main():
     ]
 
     bezier_curve_a = cubic_bezier(bezier_points_a, parameter_values)
-    bezier_curve_b = cubic_bezier(bezier_points_b, parameter_values)
 
-    angle_phi = pi / 6
+    angle_phi = pi
     shear_factor_k = 0.6
     translation_x = 2.0
     translation_y = 1.0
@@ -217,22 +182,16 @@ def main():
 
     figure_task_2, axis_task_2 = plt.subplots(figsize=(10, 8))
 
-    # Панцирь (сплайн)
-    shell_control_points = [
-        (-2.8, 0.0),
-        (-2.3, 1.2),
-        (-1.2, 2.0),
-        (0.0, 2.2),
-        (1.2, 2.0),
-        (2.3, 1.2),
-        (2.8, 0.0),
-        (2.3, -1.2),
-        (1.2, -2.0),
-        (0.0, -2.2),
-        (-1.2, -2.0),
-        (-2.3, -1.2),
-    ]
-    shell_curve = catmull_rom_spline(shell_control_points, samples_per_segment=60, closed=True)
+    # Панцирь
+    shell_upper = cubic_bezier(
+        [(-2.8, 0.0), (-2.8, 3.25), (2.8, 3.25), (2.8, 0.0)],
+        parameter_values
+    )
+
+    shell_lower = cubic_bezier(
+        [(2.8, 0.0), (2.8, -3.25), (-2.8, -3.25), (-2.8, 0.0)],
+        parameter_values
+    )
 
     # Голова
     head_upper = quadratic_bezier(
@@ -299,7 +258,8 @@ def main():
     eye_1 = (4.0, 0.2)
     eye_2 = (4.0, -0.2)
 
-    axis_task_2.plot(shell_curve[:, 0], shell_curve[:, 1], linewidth=2.7, label="Панцирь (сплайн)")
+    axis_task_2.plot(shell_upper[:, 0], shell_upper[:, 1], linewidth=2.7, label="Панцирь (сплайн из Безье)")
+    axis_task_2.plot(shell_lower[:, 0], shell_lower[:, 1], linewidth=2.7)
 
     axis_task_2.plot(head_upper[:, 0], head_upper[:, 1], linewidth=2.2, label="Голова/хвост (Безье 2)")
     axis_task_2.plot(head_lower[:, 0], head_lower[:, 1], linewidth=2.2)
@@ -363,6 +323,37 @@ def main():
     axis_task_2.grid(True)
 
     axis_task_2.legend(loc="lower right")
+
+    def draw_points(points):
+        points_array = np.array(points, dtype=float)
+        axis_task_2.plot(
+            points_array[:, 0],
+            points_array[:, 1],
+            "o--",
+            linewidth=1.0,
+            markersize=4
+        )
+
+    draw_points([(-2.8, 0.0), (-2.8, 3.25), (2.8, 3.25), (2.8, 0.0)])
+    draw_points([(2.8, 0.0), (2.8, -3.25), (-2.8, -3.25), (-2.8, 0.0)])
+
+    draw_points([(2.8, 0.5), (3.8, 1.2), (4.5, 0.0)])
+    draw_points([(2.8, -0.5), (3.8, -1.2), (4.5, 0.0)])
+
+    draw_points([(-2.8, 0.3), (-3.6, 0.7), (-4.0, 0.0)])
+    draw_points([(-2.8, -0.3), (-3.6, -0.7), (-4.0, 0.0)])
+
+    draw_points([(1.8, -1.8), (2.15, -2.1), (2.35, -2.45), (2.2, -3.0)])
+    draw_points([(2.2, -3.0), (1.95, -2.95), (1.75, -2.35), (1.6, -1.9)])
+
+    draw_points([(-1.8, -1.8), (-2.15, -2.1), (-2.35, -2.45), (-2.2, -3.0)])
+    draw_points([(-2.2, -3.0), (-1.95, -2.95), (-1.75, -2.35), (-1.6, -1.9)])
+
+    draw_points([(1.8, 1.8), (2.15, 2.1), (2.35, 2.45), (2.2, 3.0)])
+    draw_points([(2.2, 3.0), (1.95, 2.95), (1.75, 2.35), (1.6, 1.9)])
+
+    draw_points([(-1.8, 1.8), (-2.15, 2.1), (-2.35, 2.45), (-2.2, 3.0)])
+    draw_points([(-2.2, 3.0), (-1.95, 2.95), (-1.75, 2.35), (-1.6, 1.9)])
 
     plt.show()
 
