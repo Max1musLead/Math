@@ -1,438 +1,434 @@
-﻿import math
-import matplotlib.pyplot as plt
+﻿from __future__ import annotations
+import math
+from typing import Iterable
+import numpy as np
+from matplotlib import pyplot as plt
 
-epsilon_value = 1e-9
+EPSILON = 1e-9
+Point = tuple[float, float]
 
-def cross_product(point_a, point_b, point_c):
+def orient(point_a: Point, point_b: Point, point_c: Point) -> float:
     return (
         (point_b[0] - point_a[0]) * (point_c[1] - point_a[1])
         - (point_b[1] - point_a[1]) * (point_c[0] - point_a[0])
     )
 
-
-def distance_squared(point_a, point_b):
+def distance_squared(point_a: Point, point_b: Point) -> float:
     delta_x = point_a[0] - point_b[0]
     delta_y = point_a[1] - point_b[1]
     return delta_x * delta_x + delta_y * delta_y
 
+def remove_duplicate_points(points: Iterable[Point]) -> list[Point]:
+    unique_points: list[Point] = []
+    used_points: set[tuple[float, float]] = set()
 
-def polygon_area(polygon_points):
-    if len(polygon_points) < 3:
-        return 0.0
-
-    doubled_area = 0.0
-    points_count = len(polygon_points)
-
-    for point_index in range(points_count):
-        next_index = (point_index + 1) % points_count
-        doubled_area += (
-            polygon_points[point_index][0] * polygon_points[next_index][1]
-            - polygon_points[next_index][0] * polygon_points[point_index][1]
-        )
-
-    return abs(doubled_area) / 2.0
-
-
-def polygon_perimeter(polygon_points):
-    if len(polygon_points) < 2:
-        return 0.0
-
-    perimeter_value = 0.0
-    points_count = len(polygon_points)
-
-    for point_index in range(points_count):
-        next_index = (point_index + 1) % points_count
-        delta_x = polygon_points[next_index][0] - polygon_points[point_index][0]
-        delta_y = polygon_points[next_index][1] - polygon_points[point_index][1]
-        perimeter_value += math.hypot(delta_x, delta_y)
-
-    return perimeter_value
-
-
-def is_point_on_segment(point_a, point_b, point_to_check):
-    cross_value = cross_product(point_a, point_b, point_to_check)
-    if abs(cross_value) > epsilon_value:
-        return False
-
-    minimum_x = min(point_a[0], point_b[0]) - epsilon_value
-    maximum_x = max(point_a[0], point_b[0]) + epsilon_value
-    minimum_y = min(point_a[1], point_b[1]) - epsilon_value
-    maximum_y = max(point_a[1], point_b[1]) + epsilon_value
-
-    return (
-        minimum_x <= point_to_check[0] <= maximum_x
-        and minimum_y <= point_to_check[1] <= maximum_y
-    )
-
-
-def point_in_convex_polygon(point_to_check, polygon_points):
-    if len(polygon_points) < 3:
-        return False
-
-    has_positive = False
-    has_negative = False
-    points_count = len(polygon_points)
-
-    for point_index in range(points_count):
-        next_index = (point_index + 1) % points_count
-        current_cross = cross_product(
-            polygon_points[point_index],
-            polygon_points[next_index],
-            point_to_check
-        )
-
-        if abs(current_cross) <= epsilon_value:
-            if is_point_on_segment(
-                polygon_points[point_index],
-                polygon_points[next_index],
-                point_to_check
-            ):
-                return True
-        elif current_cross > 0:
-            has_positive = True
-        else:
-            has_negative = True
-
-        if has_positive and has_negative:
-            return False
-
-    return True
-
-
-def remove_duplicate_points(points):
-    unique_points = []
-    used_points = set()
-
-    for point_value in points:
-        rounded_point = (round(point_value[0], 10), round(point_value[1], 10))
+    for point in points:
+        rounded_point = (round(point[0], 12), round(point[1], 12))
         if rounded_point not in used_points:
             used_points.add(rounded_point)
-            unique_points.append((point_value[0], point_value[1]))
+            unique_points.append(point)
 
     return unique_points
 
+def generate_points_in_disk(
+    point_count: int,
+    center: Point,
+    radius: float,
+    random_generator: np.random.Generator,
+) -> list[Point]:
+    points: list[Point] = []
 
-def graham_convex_hull(point_set):
-    unique_points = remove_duplicate_points(point_set)
+    for _ in range(point_count):
+        angle = 2.0 * math.pi * random_generator.random()
+        random_radius = radius * math.sqrt(random_generator.random())
+        x_value = center[0] + random_radius * math.cos(angle)
+        y_value = center[1] + random_radius * math.sin(angle)
+        points.append((x_value, y_value))
 
-    if len(unique_points) <= 1:
+    return points
+
+
+def generate_point_sets(
+    g_count: int,
+    d_count: int,
+    random_generator: np.random.Generator,
+) -> tuple[list[Point], list[Point]]:
+    g_points = generate_points_in_disk(g_count, center=(0.0, 0.0), radius=6.0, random_generator=random_generator)
+    d_points = generate_points_in_disk(d_count, center=(4.0, 1.0), radius=5.5, random_generator=random_generator)
+    return g_points, d_points
+
+def graham_hull(points: list[Point]) -> list[Point]:
+    unique_points = remove_duplicate_points(points)
+
+    if len(unique_points) <= 2:
         return unique_points
 
-    start_point = min(unique_points, key=lambda point_value: (point_value[1], point_value[0]))
+    start_point = min(unique_points, key=lambda point: (point[1], point[0]))
+    other_points = [point for point in unique_points if point != start_point]
 
-    def polar_angle_and_distance(point_value):
-        angle_value = math.atan2(
-            point_value[1] - start_point[1],
-            point_value[0] - start_point[0]
+    other_points.sort(
+        key=lambda point: (
+            math.atan2(point[1] - start_point[1], point[0] - start_point[0]),
+            distance_squared(start_point, point),
         )
-        distance_value = distance_squared(start_point, point_value)
-        return angle_value, distance_value
+    )
 
-    sorted_points = sorted(unique_points, key=polar_angle_and_distance)
-
-    filtered_points = []
-    for point_value in sorted_points:
-        while (
-            len(filtered_points) > 0
-            and abs(
-                math.atan2(
-                    point_value[1] - start_point[1],
-                    point_value[0] - start_point[0]
-                )
-                - math.atan2(
-                    filtered_points[-1][1] - start_point[1],
-                    filtered_points[-1][0] - start_point[0]
-                )
-            ) <= epsilon_value
-        ):
-            if distance_squared(start_point, point_value) >= distance_squared(start_point, filtered_points[-1]):
+    filtered_points: list[Point] = []
+    for point in other_points:
+        while filtered_points:
+            previous_angle = math.atan2(
+                filtered_points[-1][1] - start_point[1],
+                filtered_points[-1][0] - start_point[0],
+            )
+            current_angle = math.atan2(
+                point[1] - start_point[1],
+                point[0] - start_point[0],
+            )
+            if abs(previous_angle - current_angle) > EPSILON:
+                break
+            if distance_squared(start_point, point) >= distance_squared(start_point, filtered_points[-1]):
                 filtered_points.pop()
             else:
                 break
         else:
-            filtered_points.append(point_value)
+            filtered_points.append(point)
             continue
 
-        if (
-            len(filtered_points) == 0
-            or filtered_points[-1] != point_value
-        ):
-            filtered_points.append(point_value)
+        if not filtered_points or abs(
+            math.atan2(filtered_points[-1][1] - start_point[1], filtered_points[-1][0] - start_point[0]) - current_angle
+        ) > EPSILON:
+            filtered_points.append(point)
 
-    if len(filtered_points) < 3:
-        return filtered_points
+    if len(filtered_points) == 0:
+        return [start_point]
+    if len(filtered_points) == 1:
+        return [start_point, filtered_points[0]]
 
-    hull_stack = [filtered_points[0], filtered_points[1]]
+    stack: list[Point] = [start_point, filtered_points[0]]
 
-    for point_value in filtered_points[2:]:
-        while (
-            len(hull_stack) >= 2
-            and cross_product(hull_stack[-2], hull_stack[-1], point_value) <= epsilon_value
-        ):
-            hull_stack.pop()
-        hull_stack.append(point_value)
+    for point in filtered_points[1:]:
+        while len(stack) >= 2 and orient(stack[-2], stack[-1], point) <= EPSILON:
+            stack.pop()
+        stack.append(point)
 
-    return hull_stack
+    return stack
 
+def jarvis_hull(points: list[Point]) -> list[Point]:
+    unique_points = remove_duplicate_points(points)
 
-def jarvis_convex_hull(point_set):
-    unique_points = remove_duplicate_points(point_set)
-
-    if len(unique_points) <= 1:
+    if len(unique_points) <= 2:
         return unique_points
 
-    start_point = min(unique_points, key=lambda point_value: (point_value[1], point_value[0]))
-    hull_points = []
-    current_point = start_point
+    start_point_index = min(
+        range(len(unique_points)),
+        key=lambda index: (unique_points[index][1], unique_points[index][0]),
+    )
+
+    hull: list[Point] = []
+    current_index = start_point_index
 
     while True:
-        hull_points.append(current_point)
-        candidate_point = None
+        hull.append(unique_points[current_index])
+        next_index = None
 
-        for point_value in unique_points:
-            if point_value == current_point:
-                continue
-            candidate_point = point_value
-            break
-
-        for point_value in unique_points:
-            if point_value == current_point or point_value == candidate_point:
+        for point_index in range(len(unique_points)):
+            if point_index == current_index:
                 continue
 
-            orientation_value = cross_product(current_point, candidate_point, point_value)
+            if next_index is None:
+                next_index = point_index
+                continue
 
-            if orientation_value > epsilon_value:
-                candidate_point = point_value
-            elif abs(orientation_value) <= epsilon_value:
-                if distance_squared(current_point, point_value) > distance_squared(current_point, candidate_point):
-                    candidate_point = point_value
+            orientation_value = orient(
+                unique_points[current_index],
+                unique_points[next_index],
+                unique_points[point_index],
+            )
 
-        current_point = candidate_point
+            if orientation_value < -EPSILON:
+                next_index = point_index
+            elif abs(orientation_value) <= EPSILON:
+                if distance_squared(unique_points[current_index], unique_points[point_index]) > distance_squared(
+                    unique_points[current_index],
+                    unique_points[next_index],
+                ):
+                    next_index = point_index
 
-        if current_point == start_point:
+        current_index = next_index
+
+        if current_index == start_point_index:
             break
 
-    return hull_points
+    return hull
 
+def polygon_signed_area(polygon: list[Point]) -> float:
+    if len(polygon) < 3:
+        return 0.0
 
-def line_intersection(point_a1, point_a2, point_b1, point_b2):
-    x1, y1 = point_a1
-    x2, y2 = point_a2
-    x3, y3 = point_b1
-    x4, y4 = point_b2
+    area_value = 0.0
+    point_count = len(polygon)
 
-    denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    for point_index in range(point_count):
+        x1_value, y1_value = polygon[point_index]
+        x2_value, y2_value = polygon[(point_index + 1) % point_count]
+        area_value += x1_value * y2_value - x2_value * y1_value
 
-    if abs(denominator) <= epsilon_value:
+    return 0.5 * area_value
+
+def polygon_area(polygon: list[Point]) -> float:
+    return abs(polygon_signed_area(polygon))
+
+def polygon_perimeter(polygon: list[Point]) -> float:
+    if len(polygon) < 2:
+        return 0.0
+
+    perimeter_value = 0.0
+    point_count = len(polygon)
+
+    for point_index in range(point_count):
+        point_a = polygon[point_index]
+        point_b = polygon[(point_index + 1) % point_count]
+        perimeter_value += math.hypot(point_b[0] - point_a[0], point_b[1] - point_a[1])
+
+    return perimeter_value
+
+def ensure_counterclockwise(polygon: list[Point]) -> list[Point]:
+    if polygon_signed_area(polygon) < 0.0:
+        return polygon[::-1]
+    return polygon
+
+def point_on_segment(point: Point, segment_start: Point, segment_end: Point) -> bool:
+    if abs(orient(segment_start, segment_end, point)) > EPSILON:
+        return False
+
+    return (
+        min(segment_start[0], segment_end[0]) - EPSILON <= point[0] <= max(segment_start[0], segment_end[0]) + EPSILON
+        and min(segment_start[1], segment_end[1]) - EPSILON <= point[1] <= max(segment_start[1], segment_end[1]) + EPSILON
+    )
+
+def point_in_polygon(point: Point, polygon: list[Point]) -> str:
+    if len(polygon) < 3:
+        return "OUTSIDE"
+
+    winding_number = 0
+    point_x, point_y = point
+
+    for point_index in range(len(polygon)):
+        point_a = polygon[point_index]
+        point_b = polygon[(point_index + 1) % len(polygon)]
+
+        if point_on_segment(point, point_a, point_b):
+            return "BOUNDARY"
+
+        if point_a[1] <= point_y:
+            if point_b[1] > point_y and orient(point_a, point_b, point) > EPSILON:
+                winding_number += 1
+        else:
+            if point_b[1] <= point_y and orient(point_a, point_b, point) < -EPSILON:
+                winding_number -= 1
+
+    if winding_number != 0:
+        return "INSIDE"
+    return "OUTSIDE"
+
+def strictly_inside_polygon(point: Point, polygon: list[Point]) -> bool:
+    return point_in_polygon(point, polygon) == "INSIDE"
+
+def cross_product(vector_a: tuple[float, float], vector_b: tuple[float, float]) -> float:
+    return vector_a[0] * vector_b[1] - vector_a[1] * vector_b[0]
+
+def point_inside_halfplane(point: Point, line_start: Point, line_end: Point) -> bool:
+    return orient(line_start, line_end, point) >= -EPSILON
+
+def segment_line_intersection(
+    segment_start: Point,
+    segment_end: Point,
+    line_start: Point,
+    line_end: Point,
+) -> Point | None:
+    line_direction = (line_end[0] - line_start[0], line_end[1] - line_start[1])
+    segment_direction = (segment_end[0] - segment_start[0], segment_end[1] - segment_start[1])
+
+    denominator = cross_product(line_direction, segment_direction)
+
+    if abs(denominator) < EPSILON:
         return None
 
-    determinant_1 = x1 * y2 - y1 * x2
-    determinant_2 = x3 * y4 - y3 * x4
+    start_difference = (segment_start[0] - line_start[0], segment_start[1] - line_start[1])
+    parameter_u = -cross_product(line_direction, start_difference) / denominator
 
-    intersection_x = (
-        determinant_1 * (x3 - x4) - (x1 - x2) * determinant_2
-    ) / denominator
-    intersection_y = (
-        determinant_1 * (y3 - y4) - (y1 - y2) * determinant_2
-    ) / denominator
+    if -EPSILON <= parameter_u <= 1.0 + EPSILON:
+        return (
+            segment_start[0] + parameter_u * segment_direction[0],
+            segment_start[1] + parameter_u * segment_direction[1],
+        )
 
-    return (intersection_x, intersection_y)
+    return None
 
-
-def inside_edge(point_value, edge_start, edge_end):
-    return cross_product(edge_start, edge_end, point_value) >= -epsilon_value
-
-
-def polygon_intersection(subject_polygon, clip_polygon):
-    if len(subject_polygon) < 3 or len(clip_polygon) < 3:
+def convex_polygon_intersection(first_polygon: list[Point], second_polygon: list[Point]) -> list[Point]:
+    if len(first_polygon) < 3 or len(second_polygon) < 3:
         return []
 
-    output_polygon = subject_polygon[:]
+    subject_polygon = ensure_counterclockwise(first_polygon)
+    clipping_polygon = ensure_counterclockwise(second_polygon)
 
-    for clip_index in range(len(clip_polygon)):
-        clip_edge_start = clip_polygon[clip_index]
-        clip_edge_end = clip_polygon[(clip_index + 1) % len(clip_polygon)]
+    def clip_polygon(polygon: list[Point], clip_start: Point, clip_end: Point) -> list[Point]:
+        if not polygon:
+            return []
 
-        input_polygon = output_polygon[:]
-        output_polygon = []
+        result_polygon: list[Point] = []
+        previous_point = polygon[-1]
+        previous_inside = point_inside_halfplane(previous_point, clip_start, clip_end)
 
-        if len(input_polygon) == 0:
-            break
-
-        previous_point = input_polygon[-1]
-
-        for current_point in input_polygon:
-            current_inside = inside_edge(current_point, clip_edge_start, clip_edge_end)
-            previous_inside = inside_edge(previous_point, clip_edge_start, clip_edge_end)
+        for current_point in polygon:
+            current_inside = point_inside_halfplane(current_point, clip_start, clip_end)
 
             if current_inside:
                 if not previous_inside:
-                    intersection_point = line_intersection(
-                        previous_point,
-                        current_point,
-                        clip_edge_start,
-                        clip_edge_end
-                    )
+                    intersection_point = segment_line_intersection(previous_point, current_point, clip_start, clip_end)
                     if intersection_point is not None:
-                        output_polygon.append(intersection_point)
-                output_polygon.append(current_point)
+                        result_polygon.append(intersection_point)
+                result_polygon.append(current_point)
             elif previous_inside:
-                intersection_point = line_intersection(
-                    previous_point,
-                    current_point,
-                    clip_edge_start,
-                    clip_edge_end
-                )
+                intersection_point = segment_line_intersection(previous_point, current_point, clip_start, clip_end)
                 if intersection_point is not None:
-                    output_polygon.append(intersection_point)
+                    result_polygon.append(intersection_point)
 
             previous_point = current_point
+            previous_inside = current_inside
 
-    return remove_duplicate_points(output_polygon)
+        return result_polygon
 
+    result_polygon = subject_polygon
 
-def points_inside_polygon(point_set, polygon_points):
-    return [
-        point_value
-        for point_value in point_set
-        if point_in_convex_polygon(point_value, polygon_points)
-    ]
+    for point_index in range(len(clipping_polygon)):
+        clip_start = clipping_polygon[point_index]
+        clip_end = clipping_polygon[(point_index + 1) % len(clipping_polygon)]
+        result_polygon = clip_polygon(result_polygon, clip_start, clip_end)
 
+        if not result_polygon:
+            return []
 
-def print_points(points_title, points):
-    print(points_title)
-    for point_index, point_value in enumerate(points, start=1):
-        print(f"{point_index:2d}: ({point_value[0]:.3f}, {point_value[1]:.3f})")
-    print()
+    cleaned_polygon: list[Point] = []
+    for point in result_polygon:
+        if cleaned_polygon and distance_squared(point, cleaned_polygon[-1]) < EPSILON * EPSILON:
+            continue
+        cleaned_polygon.append(point)
 
+    if len(cleaned_polygon) >= 2 and distance_squared(cleaned_polygon[0], cleaned_polygon[-1]) < EPSILON * EPSILON:
+        cleaned_polygon.pop()
 
-def draw_polygon(polygon_points, line_style, label_text):
-    if len(polygon_points) == 0:
-        return
+    return cleaned_polygon
 
-    closed_polygon = polygon_points + [polygon_points[0]]
-    x_values = [point_value[0] for point_value in closed_polygon]
-    y_values = [point_value[1] for point_value in closed_polygon]
-    plt.plot(x_values, y_values, line_style, linewidth=2, label=label_text)
+def plot_result(
+    g_points: list[Point],
+    d_points: list[Point],
+    g_hull: list[Point],
+    d_hull: list[Point],
+    intersection_polygon: list[Point],
+    inner_g_points: list[Point],
+    inner_d_points: list[Point],
+) -> None:
+    figure, axis = plt.subplots(figsize=(9, 7))
 
+    def closed_ring(polygon: list[Point]) -> tuple[list[float], list[float]]:
+        x_values = [point[0] for point in polygon] + [polygon[0][0]]
+        y_values = [point[1] for point in polygon] + [polygon[0][1]]
+        return x_values, y_values
 
-def main():
-    point_set_g = [
-        (1.0, 1.0),
-        (2.0, 2.5),
-        (3.0, 1.2),
-        (4.0, 3.0),
-        (5.2, 1.1),
-        (6.5, 2.0),
-        (7.5, 4.0),
-        (6.8, 6.0),
-        (5.5, 7.2),
-        (3.8, 7.8),
-        (2.0, 6.5),
-        (1.2, 4.5),
-        (2.5, 4.0),
-        (3.5, 5.0),
-        (4.8, 4.7),
-        (5.8, 5.2),
-        (3.0, 3.3),
-        (4.5, 2.5)
-    ]
+    g_x_values, g_y_values = zip(*g_points)
+    d_x_values, d_y_values = zip(*d_points)
 
-    point_set_d = [
-        (4.0, 0.8),
-        (5.5, 1.5),
-        (7.2, 1.0),
-        (8.5, 2.8),
-        (9.0, 4.5),
-        (8.2, 6.8),
-        (6.5, 8.0),
-        (4.8, 8.5),
-        (3.0, 7.2),
-        (2.2, 5.4),
-        (2.5, 3.5),
-        (3.2, 2.0),
-        (4.5, 4.2),
-        (5.8, 3.8),
-        (6.8, 5.0),
-        (5.2, 6.2),
-        (7.0, 6.0),
-        (4.0, 6.0)
-    ]
+    axis.scatter(g_x_values, g_y_values, s=30, label="Точки G")
+    axis.scatter(d_x_values, d_y_values, s=30, label="Точки D")
 
-    convex_hull_g = graham_convex_hull(point_set_g)
-    convex_hull_d = jarvis_convex_hull(point_set_d)
+    if len(g_hull) >= 2:
+        hull_x_values, hull_y_values = closed_ring(g_hull)
+        axis.plot(hull_x_values, hull_y_values, linewidth=2.0, label="Оболочка G (Грэхем)")
 
-    perimeter_g = polygon_perimeter(convex_hull_g)
-    area_g = polygon_area(convex_hull_g)
-
-    perimeter_d = polygon_perimeter(convex_hull_d)
-    area_d = polygon_area(convex_hull_d)
-
-    intersection_polygon = polygon_intersection(convex_hull_g, convex_hull_d)
-
-    inner_g_points = points_inside_polygon(point_set_g, intersection_polygon) if len(intersection_polygon) >= 3 else []
-    inner_d_points = points_inside_polygon(point_set_d, intersection_polygon) if len(intersection_polygon) >= 3 else []
-
-    print_points("Множество G:", point_set_g)
-    print_points("Множество D:", point_set_d)
-
-    print_points("Выпуклая оболочка 𝒢 = conv(G), алгоритм Грэхема:", convex_hull_g)
-    print(f"Периметр 𝒢 = {perimeter_g:.3f}")
-    print(f"Площадь 𝒢 = {area_g:.3f}")
-    print()
-
-    print_points("Выпуклая оболочка 𝒟 = conv(D), алгоритм Джарвиса:", convex_hull_d)
-    print(f"Периметр 𝒟 = {perimeter_d:.3f}")
-    print(f"Площадь 𝒟 = {area_d:.3f}")
-    print()
+    if len(d_hull) >= 2:
+        hull_x_values, hull_y_values = closed_ring(d_hull)
+        axis.plot(hull_x_values, hull_y_values, linestyle="--", linewidth=2.0, label="Оболочка D (Джарвис)")
 
     if len(intersection_polygon) >= 3:
-        print_points("Пересечение 𝒫 = 𝒢 ∩ 𝒟:", intersection_polygon)
-        print(f"Периметр 𝒫 = {polygon_perimeter(intersection_polygon):.3f}")
-        print(f"Площадь 𝒫 = {polygon_area(intersection_polygon):.3f}")
+        intersection_x_values, intersection_y_values = closed_ring(intersection_polygon)
+        axis.plot(intersection_x_values, intersection_y_values, linestyle="-.", linewidth=2.0, label="Пересечение P")
+
+    if inner_g_points:
+        inner_g_x_values, inner_g_y_values = zip(*inner_g_points)
+        axis.scatter(inner_g_x_values, inner_g_y_values, s=80, marker="*", label="Точки G внутри P")
+
+    if inner_d_points:
+        inner_d_x_values, inner_d_y_values = zip(*inner_d_points)
+        axis.scatter(inner_d_x_values, inner_d_y_values, s=80, marker="P", label="Точки D внутри P")
+
+    axis.set_aspect("equal", adjustable="box")
+    axis.grid(True)
+    axis.legend()
+    plt.tight_layout()
+    plt.show()
+
+def main() -> None:
+    random_generator = np.random.default_rng(15)
+
+    g_count = 26
+    d_count = 25
+
+    g_points, d_points = generate_point_sets(g_count, d_count, random_generator)
+
+    g_hull = ensure_counterclockwise(graham_hull(g_points))
+    d_hull = ensure_counterclockwise(jarvis_hull(d_points))
+
+    g_perimeter = polygon_perimeter(g_hull)
+    g_area = polygon_area(g_hull)
+
+    d_perimeter = polygon_perimeter(d_hull)
+    d_area = polygon_area(d_hull)
+
+    print(f"Оболочка G, алгоритм Грэхема:")
+    print(f"Периметр = {g_perimeter:.6f}")
+    print(f"Площадь = {g_area:.6f}")
+    print()
+
+    print(f"Оболочка D, алгоритм Джарвиса:")
+    print(f"Периметр = {d_perimeter:.6f}")
+    print(f"Площадь = {d_area:.6f}")
+    print()
+
+    intersection_polygon = convex_polygon_intersection(g_hull, d_hull)
+
+    if len(intersection_polygon) >= 3:
+        intersection_perimeter = polygon_perimeter(intersection_polygon)
+        intersection_area = polygon_area(intersection_polygon)
+
+        print("Пересечение P = G ∩ D:")
+        print(f"Периметр = {intersection_perimeter:.6f}")
+        print(f"Площадь = {intersection_area:.6f}")
         print()
     else:
-        print("Пересечение 𝒫 = 𝒢 ∩ 𝒟 пусто или вырождено.")
+        print("Пересечение P пустое или вырожденное.")
         print()
 
-    print_points("Точки множества G, лежащие внутри 𝒫:", inner_g_points)
-    print_points("Точки множества D, лежащие внутри 𝒫:", inner_d_points)
+    inner_g_points = [point for point in g_points if strictly_inside_polygon(point, intersection_polygon)]
+    inner_d_points = [point for point in d_points if strictly_inside_polygon(point, intersection_polygon)]
 
-    plt.figure(figsize=(10, 8))
+    print(f"Точки множества G строго внутри P: {len(inner_g_points)}")
+    print(inner_g_points)
+    print()
 
-    g_x_values = [point_value[0] for point_value in point_set_g]
-    g_y_values = [point_value[1] for point_value in point_set_g]
-    d_x_values = [point_value[0] for point_value in point_set_d]
-    d_y_values = [point_value[1] for point_value in point_set_d]
+    print(f"Точки множества D строго внутри P: {len(inner_d_points)}")
+    print(inner_d_points)
+    print()
 
-    plt.scatter(g_x_values, g_y_values, marker='o', s=50, label='Точки G')
-    plt.scatter(d_x_values, d_y_values, marker='s', s=50, label='Точки D')
-
-    draw_polygon(convex_hull_g, '-', 'Оболочка 𝒢 (Грэхем)')
-    draw_polygon(convex_hull_d, '--', 'Оболочка 𝒟 (Джарвис)')
-
-    if len(intersection_polygon) >= 3:
-        intersection_x_values = [point_value[0] for point_value in intersection_polygon]
-        intersection_y_values = [point_value[1] for point_value in intersection_polygon]
-        plt.fill(intersection_x_values, intersection_y_values, alpha=0.25, label='Пересечение 𝒫')
-
-    if len(inner_g_points) > 0:
-        inner_g_x_values = [point_value[0] for point_value in inner_g_points]
-        inner_g_y_values = [point_value[1] for point_value in inner_g_points]
-        plt.scatter(inner_g_x_values, inner_g_y_values, marker='*', s=180, label='Точки G внутри 𝒫')
-
-    if len(inner_d_points) > 0:
-        inner_d_x_values = [point_value[0] for point_value in inner_d_points]
-        inner_d_y_values = [point_value[1] for point_value in inner_d_points]
-        plt.scatter(inner_d_x_values, inner_d_y_values, marker='P', s=130, label='Точки D внутри 𝒫')
-
-    plt.title('Задание 4.1. Выпуклые оболочки, их пересечение и внутренние точки')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.axis('equal')
-    plt.grid(True)
-    plt.legend()
-    plt.show()
+    plot_result(
+        g_points,
+        d_points,
+        g_hull,
+        d_hull,
+        intersection_polygon,
+        inner_g_points,
+        inner_d_points,
+    )
 
 
 if __name__ == "__main__":
